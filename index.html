@@ -422,7 +422,7 @@ function ukazKartu(k, cerstva, znama){
           <span>${k.srst}</span><span>${k.denniDoba}</span><span>${datum}</span>
           ${k.setkani.length>1?`<span style="color:var(--mata)">${k.setkani.length}× spatřen</span>`:''}
         </div>
-        ${k.poloha ? `<div class="meta mono" style="opacity:.6">DEBUG poloha: ${k.poloha.lat.toFixed(5)}, ${k.poloha.lon.toFixed(5)} (±${Math.round(k.poloha.presnost)} m)</div>` : ''}
+        ${k.poloha ? `<div class="meta mono" style="opacity:.6">DEBUG poloha: ${k.poloha.lat.toFixed(5)}, ${k.poloha.lon.toFixed(5)} (±${Math.round(k.poloha.presnost)} m) <a href="https://www.google.com/maps?q=${k.poloha.lat},${k.poloha.lon}" target="_blank" rel="noopener" style="color:var(--mata)">mapa ↗</a></div>` : ''}
         ${staty}
         ${otazka}
         ${!znama ? `<div class="tlacitka">
