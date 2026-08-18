@@ -358,11 +358,12 @@ function zpracujSoubor(file){
 
 function zjistiPolohu(){
   return new Promise(res=>{
-    if(!navigator.geolocation) return res(null);
-    const t = setTimeout(()=>res(null), 4000);
+    if(!navigator.geolocation) return res({poloha:null, chyba:'prohlížeč to neumí'});
+    const t = setTimeout(()=>res({poloha:null, chyba:'vypršel čas'}), 4000);
+    const duvody = {1:'zamítnuto', 2:'poloha nedostupná', 3:'vypršel čas'};
     navigator.geolocation.getCurrentPosition(
-      p=>{ clearTimeout(t); res({lat:p.coords.latitude, lon:p.coords.longitude, presnost:p.coords.accuracy}); },
-      ()=>{ clearTimeout(t); res(null); },
+      p=>{ clearTimeout(t); res({poloha:{lat:p.coords.latitude, lon:p.coords.longitude, presnost:p.coords.accuracy}, chyba:null}); },
+      e=>{ clearTimeout(t); res({poloha:null, chyba: duvody[e.code] || 'nezjištěno'}); },
       {enableHighAccuracy:true, timeout:4000}
     );
   });
@@ -502,7 +503,7 @@ function vykresliSbirku(){
   });
 }
 
-function ukazKartu(k, cerstva, znama){
+function ukazKartu(k, cerstva, znama, duvodBezPolohy){
   const v = VZACNOSTI.find(x=>x.nazev===k.vzacnost) || VZACNOSTI[0];
   const staty = Object.entries(k.statistiky).map(([n,h])=>`
     <div class="stat">
@@ -534,6 +535,7 @@ function ukazKartu(k, cerstva, znama){
           ${k.setkani.length>1?`<span style="color:var(--mata)">${k.setkani.length}× spatřen</span>`:''}
         </div>
         ${k.poloha ? `<div class="meta mono" style="opacity:.6">DEBUG poloha: ${k.poloha.lat.toFixed(5)}, ${k.poloha.lon.toFixed(5)} (±${Math.round(k.poloha.presnost)} m) <a href="https://www.google.com/maps?q=${k.poloha.lat},${k.poloha.lon}" target="_blank" rel="noopener" style="color:var(--mata)">mapa ↗</a></div>` : ''}
+        ${!k.poloha && cerstva && duvodBezPolohy ? `<div class="meta mono" style="opacity:.6">Poloha se nepodařila zjistit (${duvodBezPolohy}) — úlovek je uložen bez ní.</div>` : ''}
         ${staty}
         ${otazka}
         ${!znama ? `<div class="tlacitka">
@@ -559,7 +561,7 @@ function ukazKartu(k, cerstva, znama){
     pamet.ulovky.push(k); uloz(); vykresliSbirku(); zavri();
     hlas(`${k.jmeno} přidán do sbírky.`);
   });
-  $('#btnJina') && ($('#btnJina').onclick = ()=>ukazKartu(k, true, null));
+  $('#btnJina') && ($('#btnJina').onclick = ()=>ukazKartu(k, true, null, duvodBezPolohy));
   $('#btnStejna') && ($('#btnStejna').onclick = ()=>{
     znama.setkani.push(new Date().toISOString());
     znama.foto = k.foto;
@@ -575,13 +577,13 @@ $('#vstup').onchange = async e=>{
   if(!f) return;
   hlas('Prohlížím fotku…');
   try{
-    const [{dataUrl, rozbor}, poloha] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
+    const [{dataUrl, rozbor}, {poloha, chyba}] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
     const k = vyrobKartu(rozbor, new Date().getHours());
     k.foto = dataUrl;
     k.poloha = poloha;
     if(poloha) console.log('poloha (jen pro testing, v UI se nezobrazuje):', poloha);
     hlas('');
-    ukazKartu(k, true, hledejZnamou(k));
+    ukazKartu(k, true, hledejZnamou(k), chyba);
   }catch(err){
     hlas(err.message || 'Něco se nepovedlo, zkus to znovu.');
   }
