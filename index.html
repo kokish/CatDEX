@@ -427,7 +427,8 @@ function ukazKartu(k, cerstva, znama){
         ${!znama ? `<div class="tlacitka">
           ${cerstva?`<button class="akce" id="btnZahodit">Zahodit</button>
                      <button class="akce hlavni" id="btnUlozit">Přidat do sbírky</button>`
-                  :`<button class="akce" id="btnZavrit">Zavřít</button>`}
+                  :`<button class="akce" id="btnSmazat">Smazat</button>
+                     <button class="akce" id="btnZavrit">Zavřít</button>`}
         </div>`:''}
       </div>
     </article>`;
@@ -436,6 +437,12 @@ function ukazKartu(k, cerstva, znama){
   const zavri = ()=>{ $('#zaves').classList.remove('vidno'); $('#zaves').innerHTML=''; };
   $('#btnZavrit') && ($('#btnZavrit').onclick = zavri);
   $('#btnZahodit') && ($('#btnZahodit').onclick = ()=>{ zavri(); hlas('Zahozeno. Kočka o tom neví.'); });
+  $('#btnSmazat') && ($('#btnSmazat').onclick = ()=>{
+    if(!confirm(`Smazat ${k.jmeno} ze sbírky? Nejde to vrátit.`)) return;
+    pamet.ulovky = pamet.ulovky.filter(u=>u.id!==k.id);
+    uloz(); vykresliSbirku(); zavri();
+    hlas(`${k.jmeno} smazán ze sbírky.`);
+  });
   $('#btnUlozit') && ($('#btnUlozit').onclick = ()=>{
     pamet.ulovky.push(k); uloz(); vykresliSbirku(); zavri();
     hlas(`${k.jmeno} přidán do sbírky.`);
