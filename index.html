@@ -422,6 +422,7 @@ function ukazKartu(k, cerstva, znama){
           <span>${k.srst}</span><span>${k.denniDoba}</span><span>${datum}</span>
           ${k.setkani.length>1?`<span style="color:var(--mata)">${k.setkani.length}× spatřen</span>`:''}
         </div>
+        ${k.poloha ? `<div class="meta mono" style="opacity:.6">DEBUG poloha: ${k.poloha.lat.toFixed(5)}, ${k.poloha.lon.toFixed(5)} (±${Math.round(k.poloha.presnost)} m)</div>` : ''}
         ${staty}
         ${otazka}
         ${!znama ? `<div class="tlacitka">
@@ -467,6 +468,7 @@ $('#vstup').onchange = async e=>{
     const k = vyrobKartu(rozbor, new Date().getHours());
     k.foto = dataUrl;
     k.poloha = poloha;
+    if(poloha) console.log('poloha (jen pro testing, v UI se nezobrazuje):', poloha);
     hlas('');
     ukazKartu(k, true, hledejZnamou(k));
   }catch(err){
