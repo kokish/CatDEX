@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161B26">
+<title>Kočkodex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asfalt:#161B26;
+  --asfalt-2:#1F2635;
+  --linka:#2E3849;
+  --sodik:#F2A93B;
+  --sodik-tmavy:#8A5E1C;
+  --mata:#7FD1C1;
+  --papir:#E9E6DD;
+  --seda:#8C93A1;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--asfalt);
+  color:var(--papir);
+  font-family:"Newsreader",Georgia,serif;
+  font-size:17px;line-height:1.5;
+  padding:0 18px calc(120px + env(safe-area-inset-bottom));
+  max-width:640px;margin:0 auto;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:800;letter-spacing:-.02em;margin:0}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* --- lampa: světelný kužel nahoře --- */
+.lampa{
+  position:fixed;top:-180px;left:50%;transform:translateX(-50%);
+  width:520px;height:420px;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(242,169,59,.16),rgba(242,169,59,0) 62%);
+}
+header{position:relative;z-index:1;padding:26px 0 18px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+header h1{font-size:27px;color:var(--papir)}
+header h1 span{color:var(--sodik)}
+.pocitadlo{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--seda)}
+
+main{position:relative;z-index:1}
+
+/* --- hlavní tlačítko --- */
+.lovit{
+  display:flex;align-items:center;gap:16px;width:100%;
+  background:var(--asfalt-2);border:1px solid var(--linka);border-radius:20px;
+  padding:18px 20px;color:var(--papir);text-align:left;cursor:pointer;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:19px;
+  transition:border-color .2s,transform .1s;
+}
+.lovit:active{transform:scale(.99)}
+.lovit:focus-visible{outline:2px solid var(--sodik);outline-offset:3px}
+.zavora{
+  width:46px;height:46px;flex:none;border-radius:50%;
+  border:2px solid var(--sodik);position:relative;
+  box-shadow:0 0 22px rgba(242,169,59,.35);
+}
+.zavora::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--sodik)}
+.lovit small{display:block;font-family:"Newsreader",serif;font-weight:400;font-size:13px;color:var(--seda);letter-spacing:0}
+input[type=file]{display:none}
+
+.stav{margin:14px 2px 0;font-size:13px;color:var(--seda);min-height:20px}
+
+/* --- prázdný stav --- */
+.prazdno{
+  margin-top:34px;padding:26px 22px;border:1px dashed var(--linka);border-radius:20px;
+  color:var(--seda);font-size:15px;
+}
+.prazdno b{color:var(--papir);font-family:"Bricolage Grotesque",sans-serif}
+
+/* --- sbírka --- */
+.nadpis-sekce{
+  display:flex;align-items:center;gap:12px;margin:38px 0 14px;
+  font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--seda);
+  font-family:"JetBrains Mono",monospace;
+}
+.nadpis-sekce::after{content:"";flex:1;height:1px;background:var(--linka)}
+.mrizka{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.dlazdice{
+  background:var(--asfalt-2);border:1px solid var(--linka);border-radius:16px;
+  overflow:hidden;cursor:pointer;text-align:left;padding:0;color:inherit;font:inherit;
+  transition:border-color .2s;
+}
+.dlazdice:active{border-color:var(--sodik)}
+.dlazdice img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#0E121B}
+.dlazdice .info{padding:10px 12px 12px}
+.dlazdice .jm{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px;line-height:1.2}
+.dlazdice .vz{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-top:5px}
+.odznak-setkani{
+  display:inline-block;margin-top:6px;font-family:"JetBrains Mono",monospace;
+  font-size:10px;color:var(--mata);border:1px solid rgba(127,209,193,.4);
+  border-radius:99px;padding:1px 7px;
+}
+
+/* --- karta / detail --- */
+.zaves{
+  position:fixed;inset:0;z-index:50;background:rgba(10,13,20,.82);
+  backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;
+  padding:20px 16px calc(30px + env(safe-area-inset-bottom));overflow-y:auto;
+}
+.zaves.vidno{display:flex}
+.karta{
+  width:100%;max-width:380px;background:var(--asfalt-2);
+  border:1px solid var(--linka);border-radius:22px;overflow:hidden;
+  animation:prijezd .42s cubic-bezier(.2,.8,.25,1);
+}
+@keyframes prijezd{from{opacity:0;transform:translateY(26px) scale(.97)}to{opacity:1;transform:none}}
+.karta-foto{position:relative;background:#0E121B}
+.karta-foto img{width:100%;display:block;aspect-ratio:4/5;object-fit:cover}
+.karta-foto::after{content:"";position:absolute;inset:0;box-shadow:inset 0 -70px 70px -30px var(--asfalt-2)}
+.stuha{
+  position:absolute;top:14px;left:14px;z-index:2;
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:99px;
+  background:rgba(14,18,27,.78);border:1px solid currentColor;
+}
+.karta-telo{padding:18px 20px 22px}
+.karta-telo h2{font-size:26px;line-height:1.1}
+.pridomek{font-style:italic;color:var(--seda);font-size:15px;margin:4px 0 0}
+.meta{
+  margin:14px 0 18px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--seda);
+  display:flex;flex-wrap:wrap;gap:6px 14px;
+}
+/* statistiky jako měřítko */
+.stat{margin-bottom:11px}
+.stat-hlava{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.stat-hlava span:last-child{color:var(--sodik)}
+.skala{height:9px;display:flex;gap:2px}
+.dilek{flex:1;background:var(--linka);border-radius:1px}
+.dilek.plny{background:var(--sodik)}
+.tlacitka{display:flex;gap:10px;margin-top:20px}
+button.akce{
+  flex:1;padding:13px;border-radius:13px;border:1px solid var(--linka);
+  background:transparent;color:var(--papir);font-family:"Bricolage Grotesque",sans-serif;
+  font-weight:700;font-size:15px;cursor:pointer;
+}
+button.akce.hlavni{background:var(--sodik);border-color:var(--sodik);color:#171008}
+button.akce:focus-visible{outline:2px solid var(--mata);outline-offset:2px}
+
+/* --- otázka na známou kočku --- */
+.znama{
+  margin:16px 0 0;padding:14px 16px;border-radius:14px;
+  background:rgba(127,209,193,.08);border:1px solid rgba(127,209,193,.35);font-size:15px;
+}
+.znama b{font-family:"Bricolage Grotesque",sans-serif}
+
+/* --- patička --- */
+footer{margin-top:44px;border-top:1px solid var(--linka);padding-top:18px;font-size:13px;color:var(--seda)}
+footer .radek{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+footer button{
+  background:transparent;border:1px solid var(--linka);color:var(--seda);
+  border-radius:10px;padding:8px 13px;font-family:"JetBrains Mono",monospace;font-size:12px;cursor:pointer;
+}
+footer button:active{color:var(--papir)}
+footer p{margin:0;line-height:1.45}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="lampa"></div>
+
+<header>
+  <h1>KOČKO<span>DEX</span></h1>
+  <div class="pocitadlo mono" id="pocitadlo">0 úlovků</div>
+</header>
+
+<main>
+  <button class="lovit" id="btnLovit">
+    <span class="zavora"></span>
+    <span>Vyfotit kočku<small>Jen fotoaparát. Galerie se nepočítá.</small></span>
+  </button>
+  <input type="file" id="vstup" accept="image/*" capture="environment">
+  <div class="stav" id="stav"></div>
+
+  <div class="prazdno" id="prazdno">
+    <b>Sbírka je zatím prázdná.</b><br>
+    Potkáš kočku, vyfotíš ji, appka jí vystaví kartu. Černé kočky po setmění jsou vzácnější než zrzek na parapetu v poledne.
+  </div>
+
+  <div id="sekceSbirka" style="display:none">
+    <div class="nadpis-sekce">Sbírka</div>
+    <div class="mrizka" id="mrizka"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="radek">
+    <button id="btnExport">Zálohovat sbírku</button>
+    <button id="btnImport">Načíst zálohu</button>
+    <input type="file" id="vstupZaloha" accept="application/json">
+  </div>
+  <p>Všechno zůstává v tomhle telefonu — fotky, polohy i karty. Nikam se nic neposílá. Zálohu si ulož, ať o sbírku nepřijdeš s telefonem.</p>
+</footer>
+
+<div class="zaves" id="zaves"></div>
+
+<script>
+/* ================= ÚLOŽIŠTĚ =================
+   Schéma odděluje KARTU (data) od FOTKY (příloha).
+   Karta se dá jednou sdílet bez fotky — fotka může zůstat doma. */
+const SCHEMA = 1;
+const KLIC = 'kockodex.v1';
+let pamet = { verze: SCHEMA, ulovky: [] };
+let lzeUlozit = true;
+
+function nacti(){
+  try{
+    const s = localStorage.getItem(KLIC);
+    if(s) pamet = JSON.parse(s);
+  }catch(e){ lzeUlozit = false; }
+}
+function uloz(){
+  try{ localStorage.setItem(KLIC, JSON.stringify(pamet)); }
+  catch(e){ lzeUlozit = false; hlas('Sbírka drží jen do zavření stránky — úložiště není dostupné.'); }
+}
+function id(){ return 'k_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7); }
+
+/* ================= NÁHODA ZE SNÍMKU =================
+   Stejná fotka = stejná kočka. Statistiky nejsou losování,
+   plynou z pixelů. */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ================= ROZBOR FOTKY ================= */
+function rozborPlatna(ctx, w, h){
+  const d = ctx.getImageData(0,0,w,h).data;
+  let jas=0, sat=0, n=0, otisk=0, kontrast=0, minulyJas=null;
+  let hist = {cerna:0, bila:0, ryza:0, seda:0};
+  for(let i=0;i<d.length;i+=4*7){           // vzorkujeme, ne každý pixel
+    const r=d[i], g=d[i+1], b=d[i+2];
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    const l=(mx+mn)/2, s=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255)||1);
+    jas+=l; sat+=s; n++;
+    otisk=(otisk*31 + r + g*3 + b*7)|0;
+    if(minulyJas!==null) kontrast+=Math.abs(l-minulyJas);
+    minulyJas=l;
+    if(l<58) hist.cerna++;
+    else if(l>196 && s<.22) hist.bila++;
+    else if(s>.28 && r>g && g>=b) hist.ryza++;
+    else hist.seda++;
+  }
+  const prum = jas/n;
+  let srst='mourovatá';
+  const nej = Object.entries(hist).sort((a,b)=>b[1]-a[1])[0][0];
+  if(nej==='cerna' && hist.cerna/n>.42) srst='černá';
+  else if(nej==='bila' && hist.bila/n>.34) srst='bílá';
+  else if(nej==='ryza' && hist.ryza/n>.30) srst='zrzavá';
+  else if(nej==='seda' && hist.seda/n>.62) srst='šedá';
+  if(hist.cerna/n>.2 && hist.bila/n>.2) srst='strakatá';
+  return {
+    jas: prum,
+    sat: sat/n,
+    kontrast: kontrast/n,          // hrubý odhad „chlupatosti" povrchu
+    srst,
+    otisk: Math.abs(otisk)
+  };
+}
+
+/* ================= SLOVNÍK ================= */
+const JMENA = ['Mourek','Bobeš','Fanda','Micka','Cyril','Bohouš','Květa','Ferda','Áda','Zrzek','Vojta','Lojza','Bára','Tonda','Ruda','Kája','Emil','Máňa','Pepa','Blažena','Standa','Otakar','Hedvika','Vilém','Božena','Alfons','Ladislav','Milada','Slavoj','Dagmar','Radovan','Květoslav','Jarmila','Zdenda','Oldřich','Vendula','Přemysl','Libuše','Hubert','Bedřiška'];
+const PRIDOMKY = ['od popelnic','z parapetu','strážce garáží','pán ulice','stín z podchodu','správce dvora','vyjednavač','z lavičky u zastávky','revizor plotů','host všech kuchyní','nezdolný','věčně uražený','výběrčí pamlsků','žijící ve dvou domácnostech','tichý společník'];
+const VZACNOSTI = [
+  {nazev:'Toulavá',   barva:'#8C93A1', prah:0},
+  {nazev:'Sousedská', barva:'#B9C0CC', prah:34},
+  {nazev:'Zvláštní',  barva:'#7FD1C1', prah:56},
+  {nazev:'Vzácná',    barva:'#F2A93B', prah:74},
+  {nazev:'Mýtická',   barva:'#E36A9B', prah:88},
+  {nazev:'Legendární',barva:'#C9A7F5', prah:96}
+];
+function vzacnostZeSkore(s){ let v=VZACNOSTI[0]; for(const x of VZACNOSTI) if(s>=x.prah) v=x; return v; }
+
+/* ================= VÝROBA KARTY ================= */
+function vyrobKartu(rozbor, hodina){
+  const r = mulberry32(rozbor.otisk);
+  const noc = hodina >= 21 || hodina < 5;
+  const setmeni = (hodina>=18 && hodina<21) || (hodina>=5 && hodina<7);
+
+  let skore = r()*52;
+  if(rozbor.srst==='černá') skore += 16;
+  if(rozbor.srst==='strakatá') skore += 8;
+  if(noc) skore += 26; else if(setmeni) skore += 12;
+  if(rozbor.jas < 62) skore += 9;
+  skore = Math.max(0, Math.min(99, Math.round(skore)));
+
+  return {
+    id: id(),
+    verze: SCHEMA,
+    vznik: new Date().toISOString(),
+    jmeno: JMENA[Math.floor(r()*JMENA.length)],
+    pridomek: PRIDOMKY[Math.floor(r()*PRIDOMKY.length)],
+    srst: rozbor.srst,
+    denniDoba: noc ? 'noc' : setmeni ? 'setmění' : 'den',
+    vzacnost: vzacnostZeSkore(skore).nazev,
+    skore,
+    statistiky: {
+      'Chlupatost':  Math.max(1, Math.min(10, Math.round(rozbor.kontrast/4 + r()*3))),
+      'Majestátnost':Math.max(1, Math.min(10, Math.round(2 + r()*8))),
+      'Drzost':      Math.max(1, Math.min(10, Math.round(1 + r()*9))),
+      'Vypasenost':  Math.max(1, Math.min(10, Math.round(2 + r()*7))),
+      'Ochota nechat se pohladit': Math.max(1, Math.min(10, Math.round(1 + r()*9)))
+    },
+    setkani: [ new Date().toISOString() ],
+    poloha: null,     // přesná, jen lokálně; ven půjde vždy posunutá
+    foto: null
+  };
+}
+
+/* ================= FOTKA ================= */
+function zpracujSoubor(file){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 900;
+      const m = Math.min(1, max/Math.max(img.width, img.height));
+      const w = Math.round(img.width*m), h = Math.round(img.height*m);
+      const c = document.createElement('canvas');
+      c.width=w; c.height=h;
+      const ctx = c.getContext('2d', {willReadFrequently:true});
+      ctx.drawImage(img,0,0,w,h);
+      // překreslením přes plátno se zbavíme EXIF (GPS, model telefonu, čas)
+      res({ dataUrl: c.toDataURL('image/jpeg', .72), rozbor: rozborPlatna(ctx,w,h) });
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = ()=>rej(new Error('Fotku se nepodařilo načíst.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function zjistiPolohu(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res(null);
+    const t = setTimeout(()=>res(null), 4000);
+    navigator.geolocation.getCurrentPosition(
+      p=>{ clearTimeout(t); res({lat:p.coords.latitude, lon:p.coords.longitude, presnost:p.coords.accuracy}); },
+      ()=>{ clearTimeout(t); res(null); },
+      {enableHighAccuracy:true, timeout:4000}
+    );
+  });
+}
+
+/* ================= ZNÁMÁ KOČKA ================= */
+function metry(a,b){
+  const R=6371000, f=Math.PI/180;
+  const dLat=(b.lat-a.lat)*f, dLon=(b.lon-a.lon)*f;
+  const x=Math.sin(dLat/2)**2 + Math.cos(a.lat*f)*Math.cos(b.lat*f)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function hledejZnamou(karta){
+  if(!karta.poloha) return null;
+  return pamet.ulovky.find(u =>
+    u.srst === karta.srst && u.poloha && metry(u.poloha, karta.poloha) < 200
+  ) || null;
+}
+
+/* ================= VYKRESLENÍ ================= */
+const $ = s=>document.querySelector(s);
+function hlas(t){ $('#stav').textContent = t; }
+
+function vykresliSbirku(){
+  const m = $('#mrizka');
+  $('#pocitadlo').textContent = pamet.ulovky.length + (pamet.ulovky.length===1?' úlovek':pamet.ulovky.length<5&&pamet.ulovky.length>0?' úlovky':' úlovků');
+  $('#prazdno').style.display = pamet.ulovky.length ? 'none' : 'block';
+  $('#sekceSbirka').style.display = pamet.ulovky.length ? 'block' : 'none';
+  m.innerHTML = '';
+  [...pamet.ulovky].reverse().forEach(u=>{
+    const v = VZACNOSTI.find(x=>x.nazev===u.vzacnost) || VZACNOSTI[0];
+    const b = document.createElement('button');
+    b.className='dlazdice';
+    b.innerHTML = `
+      <img src="${u.foto||''}" alt="${u.jmeno}">
+      <div class="info">
+        <div class="jm">${u.jmeno}</div>
+        <div class="vz mono" style="color:${v.barva}">${u.vzacnost}</div>
+        ${u.setkani.length>1?`<span class="odznak-setkani">${u.setkani.length}× spatřen</span>`:''}
+      </div>`;
+    b.onclick = ()=>ukazKartu(u, false);
+    m.appendChild(b);
+  });
+}
+
+function ukazKartu(k, cerstva, znama){
+  const v = VZACNOSTI.find(x=>x.nazev===k.vzacnost) || VZACNOSTI[0];
+  const staty = Object.entries(k.statistiky).map(([n,h])=>`
+    <div class="stat">
+      <div class="stat-hlava"><span>${n}</span><span>${h}/10</span></div>
+      <div class="skala">${Array.from({length:10},(_,i)=>`<i class="dilek ${i<h?'plny':''}"></i>`).join('')}</div>
+    </div>`).join('');
+
+  const datum = new Date(k.vznik).toLocaleDateString('cs-CZ',{day:'numeric',month:'long',year:'numeric'});
+  const otazka = znama ? `
+    <div class="znama">
+      <b>Není to ${znama.jmeno}?</b> Kousek odsud už máš kočku se stejnou srstí.
+      <div class="tlacitka">
+        <button class="akce" id="btnStejna">Ano, je to ${znama.jmeno}</button>
+        <button class="akce hlavni" id="btnJina">Ne, je nová</button>
+      </div>
+    </div>` : '';
+
+  $('#zaves').innerHTML = `
+    <article class="karta">
+      <div class="karta-foto">
+        <span class="stuha mono" style="color:${v.barva}">${k.vzacnost}</span>
+        <img src="${k.foto||''}" alt="${k.jmeno}">
+      </div>
+      <div class="karta-telo">
+        <h2>${k.jmeno}</h2>
+        <p class="pridomek">${k.pridomek}</p>
+        <div class="meta mono">
+          <span>${k.srst}</span><span>${k.denniDoba}</span><span>${datum}</span>
+          ${k.setkani.length>1?`<span style="color:var(--mata)">${k.setkani.length}× spatřen</span>`:''}
+        </div>
+        ${staty}
+        ${otazka}
+        ${!znama ? `<div class="tlacitka">
+          ${cerstva?`<button class="akce" id="btnZahodit">Zahodit</button>
+                     <button class="akce hlavni" id="btnUlozit">Přidat do sbírky</button>`
+                  :`<button class="akce" id="btnZavrit">Zavřít</button>`}
+        </div>`:''}
+      </div>
+    </article>`;
+  $('#zaves').classList.add('vidno');
+
+  const zavri = ()=>{ $('#zaves').classList.remove('vidno'); $('#zaves').innerHTML=''; };
+  $('#btnZavrit') && ($('#btnZavrit').onclick = zavri);
+  $('#btnZahodit') && ($('#btnZahodit').onclick = ()=>{ zavri(); hlas('Zahozeno. Kočka o tom neví.'); });
+  $('#btnUlozit') && ($('#btnUlozit').onclick = ()=>{
+    pamet.ulovky.push(k); uloz(); vykresliSbirku(); zavri();
+    hlas(`${k.jmeno} přidán do sbírky.`);
+  });
+  $('#btnJina') && ($('#btnJina').onclick = ()=>ukazKartu(k, true, null));
+  $('#btnStejna') && ($('#btnStejna').onclick = ()=>{
+    znama.setkani.push(new Date().toISOString());
+    znama.foto = k.foto;
+    uloz(); vykresliSbirku(); zavri();
+    hlas(`${znama.jmeno} — už ${znama.setkani.length}× spatřen.`);
+  });
+}
+
+/* ================= LOV ================= */
+$('#btnLovit').onclick = ()=>$('#vstup').click();
+$('#vstup').onchange = async e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  hlas('Prohlížím fotku…');
+  try{
+    const [{dataUrl, rozbor}, poloha] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
+    const k = vyrobKartu(rozbor, new Date().getHours());
+    k.foto = dataUrl;
+    k.poloha = poloha;
+    hlas('');
+    ukazKartu(k, true, hledejZnamou(k));
+  }catch(err){
+    hlas(err.message || 'Něco se nepovedlo, zkus to znovu.');
+  }
+  e.target.value = '';
+};
+
+/* ================= ZÁLOHA ================= */
+$('#btnExport').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(pamet)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kockodex-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$('#btnImport').onclick = ()=>$('#vstupZaloha').click();
+$('#vstupZaloha').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(!d.ulovky) throw 0;
+      pamet = d; uloz(); vykresliSbirku();
+      hlas(`Načteno ${d.ulovky.length} úlovků.`);
+    }catch(_){ hlas('Tenhle soubor záloha není.'); }
+  };
+  r.readAsText(f);
+  e.target.value='';
+};
+
+nacti();
+vykresliSbirku();
+if(!lzeUlozit) hlas('Sbírka drží jen do zavření stránky — úložiště není dostupné.');
+</script>
+</body>
+</html>
