@@ -1,4 +1,4 @@
-# Kočkodex
+# CatDex
 
 Mobilní webová appka: potkáš na ulici skutečnou kočku, vyfotíš ji, appka jí vystaví
 sběratelskou kartu se jménem, vzácností a statistikami. Sbírka roste. Pokémon,
