@@ -149,6 +149,16 @@ button.akce{
 button.akce.hlavni{background:var(--sodik);border-color:var(--sodik);color:#171008}
 button.akce:focus-visible{outline:2px solid var(--mata);outline-offset:2px}
 
+/* --- mapa sbírky --- */
+.mapa-hlavicka{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;gap:10px}
+.mapa-hlavicka h2{font-size:19px}
+.mapa-platno{position:relative;margin:0 auto;overflow:hidden;background:#0E121B;border-radius:14px}
+.mapa-platno img{position:absolute;width:256px;height:256px;display:block}
+.pin{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;padding:0;border-radius:50%;
+  background:var(--sodik);border:2px solid var(--asfalt-2);box-shadow:0 0 8px rgba(242,169,59,.6);cursor:pointer}
+.pin:focus-visible{outline:2px solid var(--mata);outline-offset:2px}
+.mapa-paticka{padding:12px 18px 20px;font-size:12px;color:var(--seda)}
+
 /* --- otázka na známou kočku --- */
 .znama{
   margin:16px 0 0;padding:14px 16px;border-radius:14px;
@@ -200,9 +210,10 @@ footer p{margin:0;line-height:1.45}
   <div class="radek">
     <button id="btnExport">Zálohovat sbírku</button>
     <button id="btnImport">Načíst zálohu</button>
+    <button id="btnMapa">Mapa sbírky</button>
     <input type="file" id="vstupZaloha" accept="application/json">
   </div>
-  <p>Všechno zůstává v tomhle telefonu — fotky, polohy i karty. Nikam se nic neposílá. Zálohu si ulož, ať o sbírku nepřijdeš s telefonem.</p>
+  <p>Všechno zůstává v tomhle telefonu — fotky, polohy i karty. Zálohu si ulož, ať o sbírku nepřijdeš s telefonem. Mapa sbírky si ke svému zobrazení stahuje dlaždice z OpenStreetMap — to je jediné místo, kde appka posílá požadavky ven, a pošle se jen posunutá, nepřesná poloha.</p>
 </footer>
 
 <div class="zaves" id="zaves"></div>
@@ -371,6 +382,100 @@ function hledejZnamou(karta){
   ) || null;
 }
 
+/* ================= MAPA SBÍRKY =================
+   Piny na mapě jsou vždy posunuté 100–300 m od skutečné polohy.
+   Posun je stabilní (ze seedu id úlovku), ale nikde se neukládá —
+   počítá se znovu při každém otevření mapy, ne při ukládání. */
+function hashRetezce(s){
+  let h = 0;
+  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0;
+  return h>>>0;
+}
+function rozostriPolohu(poloha, id){
+  const r = mulberry32(hashRetezce(id));
+  const vzdalenost = 100 + r()*200;         // 100–300 m
+  const smer = r()*2*Math.PI;
+  const R = 6371000, f = Math.PI/180;
+  const lat1 = poloha.lat*f;
+  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(vzdalenost/R) + Math.cos(lat1)*Math.sin(vzdalenost/R)*Math.cos(smer));
+  const lon2 = poloha.lon*f + Math.atan2(Math.sin(smer)*Math.sin(vzdalenost/R)*Math.cos(lat1), Math.cos(vzdalenost/R)-Math.sin(lat1)*Math.sin(lat2));
+  return { lat: lat2/f, lon: lon2/f };
+}
+function lonLatNaPixel(lon, lat, zoom){
+  const n = Math.pow(2, zoom);
+  const x = (lon + 180) / 360 * n * 256;
+  const latRad = lat * Math.PI/180;
+  const y = (1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+  return { x, y };
+}
+function zvolZoom(body, rozmer){
+  for(let z=16; z>=2; z--){
+    const px = body.map(b=>lonLatNaPixel(b.lon, b.lat, z));
+    const w = Math.max(...px.map(p=>p.x)) - Math.min(...px.map(p=>p.x));
+    const h = Math.max(...px.map(p=>p.y)) - Math.min(...px.map(p=>p.y));
+    if(w <= rozmer-50 && h <= rozmer-50) return z;
+  }
+  return 2;
+}
+
+function ukazMapu(){
+  const ROZMER = 280;
+  const sPolohou = pamet.ulovky.filter(u=>u.poloha);
+  const zavriMapu = ()=>{ $('#zaves').classList.remove('vidno'); $('#zaves').innerHTML=''; };
+
+  if(!sPolohou.length){
+    $('#zaves').innerHTML = `
+      <article class="karta">
+        <div class="karta-telo">
+          <h2>Mapa sbírky</h2>
+          <p class="pridomek">Zatím žádný úlovek nemá uloženou polohu.</p>
+          <div class="tlacitka"><button class="akce" id="btnZavritMapu">Zavřít</button></div>
+        </div>
+      </article>`;
+    $('#zaves').classList.add('vidno');
+    $('#btnZavritMapu').onclick = zavriMapu;
+    return;
+  }
+
+  const body = sPolohou.map(u=>({ u, poz: rozostriPolohu(u.poloha, u.id) }));
+  const zoom = zvolZoom(body.map(b=>b.poz), ROZMER);
+  const px = body.map(b=>({ ...b, pixel: lonLatNaPixel(b.poz.lon, b.poz.lat, zoom) }));
+  const stredX = (Math.min(...px.map(b=>b.pixel.x)) + Math.max(...px.map(b=>b.pixel.x))) / 2;
+  const stredY = (Math.min(...px.map(b=>b.pixel.y)) + Math.max(...px.map(b=>b.pixel.y))) / 2;
+  const posunX = stredX - ROZMER/2, posunY = stredY - ROZMER/2;
+
+  const n = Math.pow(2, zoom);
+  const dlazdiceOd = { x: Math.floor(posunX/256), y: Math.floor(posunY/256) };
+  const dlazdiceDo = { x: Math.floor((posunX+ROZMER)/256), y: Math.floor((posunY+ROZMER)/256) };
+  let dlazdiceHtml = '';
+  for(let tx=dlazdiceOd.x; tx<=dlazdiceDo.x; tx++){
+    for(let ty=dlazdiceOd.y; ty<=dlazdiceDo.y; ty++){
+      if(ty<0 || ty>=n) continue;
+      const xm = ((tx % n) + n) % n;
+      dlazdiceHtml += `<img src="https://tile.openstreetmap.org/${zoom}/${xm}/${ty}.png" style="left:${tx*256-posunX}px;top:${ty*256-posunY}px" alt="">`;
+    }
+  }
+  const pinyHtml = px.map(b=>`<button class="pin" data-id="${b.u.id}" style="left:${b.pixel.x-posunX}px;top:${b.pixel.y-posunY}px" title="${b.u.jmeno}"></button>`).join('');
+
+  $('#zaves').innerHTML = `
+    <article class="karta">
+      <div class="mapa-hlavicka">
+        <h2>Mapa sbírky</h2>
+        <button class="akce" id="btnZavritMapu" style="flex:none;padding:8px 14px">Zavřít</button>
+      </div>
+      <div class="mapa-platno" style="width:${ROZMER}px;height:${ROZMER}px">${dlazdiceHtml}${pinyHtml}</div>
+      <p class="mapa-paticka mono">${body.length} ${body.length===1?'úlovek':'úlovků'} · polohy jsou úmyslně posunuté o 100–300 m</p>
+    </article>`;
+  $('#zaves').classList.add('vidno');
+  $('#btnZavritMapu').onclick = zavriMapu;
+  $('#zaves').querySelectorAll('.pin').forEach(btn=>{
+    btn.onclick = ()=>{
+      const u = pamet.ulovky.find(x=>x.id===btn.dataset.id);
+      if(u) ukazKartu(u, false);
+    };
+  });
+}
+
 /* ================= VYKRESLENÍ ================= */
 const $ = s=>document.querySelector(s);
 function hlas(t){ $('#stav').textContent = t; }
@@ -491,6 +596,7 @@ $('#btnExport').onclick = ()=>{
   a.download = `kockodex-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); URL.revokeObjectURL(a.href);
 };
+$('#btnMapa').onclick = ukazMapu;
 $('#btnImport').onclick = ()=>$('#vstupZaloha').click();
 $('#vstupZaloha').onchange = e=>{
   const f = e.target.files[0]; if(!f) return;
