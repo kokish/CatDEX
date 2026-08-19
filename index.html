@@ -623,10 +623,12 @@ function sTimeoutem(slib, ms, zprava){
     new Promise((_,rej)=>setTimeout(()=>rej(new Error(zprava)), ms))
   ]);
 }
+const KLIC_FOCENI = 'catdex_foceni_bezi';
 let zpracovaniBezi = false;
 async function zpracujVyfoceni(f){
   if(!f || zpracovaniBezi) return;
   zpracovaniBezi = true;
+  localStorage.removeItem(KLIC_FOCENI);
   $('#vstup').value = ''; // hned pryč, ať to fallback níž nezpracuje podruhé
   hlas('Prohlížím fotku…');
   try{
@@ -648,8 +650,12 @@ async function zpracujVyfoceni(f){
   }
   zpracovaniBezi = false;
 }
-$('#btnLovit').onclick = ()=>$('#vstup').click();
+$('#btnLovit').onclick = ()=>{
+  localStorage.setItem(KLIC_FOCENI, '1');
+  $('#vstup').click();
+};
 $('#vstup').onchange = e=>{
+  localStorage.removeItem(KLIC_FOCENI); // appka na tenhle change dosáhla — nedošlo k restartu
   const f = e.target.files[0];
   if(!f) hlas('Fotoaparát nevrátil fotku. Zkus vyfotit znovu.');
   zpracujVyfoceni(f);
@@ -688,7 +694,15 @@ $('#vstupZaloha').onchange = e=>{
 
 nacti();
 vykresliSbirku();
-if(!lzeUlozit) hlas('Sbírka drží jen do zavření stránky — úložiště není dostupné.');
+if(localStorage.getItem(KLIC_FOCENI)){
+  // appka se restartovala uprostřed focení (typicky nedostatek paměti
+  // telefonu, kdy Android/Chrome zabije stránku na pozadí) — o fotku
+  // takhle přijdeme nenávratně, jde jen appce říct, ať to zkusí znovu
+  localStorage.removeItem(KLIC_FOCENI);
+  hlas('Appka se během focení restartovala (asi došla paměť telefonu). Zkus to znovu.');
+} else if(!lzeUlozit){
+  hlas('Sbírka drží jen do zavření stránky — úložiště není dostupné.');
+}
 </script>
 </body>
 </html>
