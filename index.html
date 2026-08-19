@@ -126,6 +126,12 @@ input[type=file]{display:none}
   letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:99px;
   background:rgba(14,18,27,.78);border:1px solid currentColor;
 }
+.poradi{
+  position:absolute;top:14px;right:14px;z-index:2;color:var(--mata);
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  padding:5px 10px;border-radius:99px;
+  background:rgba(14,18,27,.78);border:1px solid currentColor;
+}
 .karta-telo{padding:18px 20px 22px}
 .karta-telo h2{font-size:26px;line-height:1.1}
 .pridomek{font-style:italic;color:var(--seda);font-size:15px;margin:4px 0 0}
@@ -505,6 +511,7 @@ function vykresliSbirku(){
 
 function ukazKartu(k, cerstva, znama, duvodBezPolohy){
   const v = VZACNOSTI.find(x=>x.nazev===k.vzacnost) || VZACNOSTI[0];
+  const poradi = cerstva ? pamet.ulovky.length+1 : pamet.ulovky.findIndex(u=>u.id===k.id)+1;
   const staty = Object.entries(k.statistiky).map(([n,h])=>`
     <div class="stat">
       <div class="stat-hlava"><span>${n}</span><span>${h}/10</span></div>
@@ -525,6 +532,7 @@ function ukazKartu(k, cerstva, znama, duvodBezPolohy){
     <article class="karta">
       <div class="karta-foto">
         <span class="stuha mono" style="color:${v.barva}">${k.vzacnost}</span>
+        <span class="poradi mono">#${poradi}</span>
         <img src="${k.foto||''}" alt="${k.jmeno}">
       </div>
       <div class="karta-telo">
