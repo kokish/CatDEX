@@ -101,7 +101,6 @@ Sbírka je zatím **soukromá**, takže tohle je zbytečná práce:
 
 - moderace, nahlašování obsahu, veřejná mapa, žebříčky
 - detekce fotky z obrazovky, ochrana proti podvádění
-- rozpoznávání, že je na fotce vůbec kočka (rohlík dostane kartu, budiž)
 - identifikace konkrétního jedince — výzkumný problém, nelez do toho
 - účty, přihlášení, backend
 - reklamy, platby
@@ -141,7 +140,11 @@ připravené v datech už teď, řekni to — to je jediná legitimní výjimka.
   soubor. Rámec přijde, až bude co rámovat.
 - **Kód i UI česky.** Názvy proměnných a funkcí česky bez diakritiky
   (`vyrobKartu`, `hledejZnamou`, `pamet`). Drž se toho, co už v souboru je.
-- **Žádné závislosti přes npm.** Fonty z Google Fonts přes `<link>`.
+- **Žádné závislosti přes npm.** Fonty z Google Fonts přes `<link>`. Výjimka:
+  TensorFlow.js + coco-ssd přes CDN `<script>` (žádný build, stejný princip
+  jako fonty) — používá se pro rozpoznání, jestli je na fotce kočka. Model
+  se stahuje na pozadí při startu appky a prohlížeč ho cachuje; když selže
+  nebo se nestihne stáhnout, appka nikdy neblokuje focení kvůli tomu.
 - **Cílová zařízení:** iOS Safari a Chrome na Androidu, mobilní šířky.
   Desktop je vedlejší. Testuje se prstem na telefonu, ne v okně prohlížeče.
 - **Fotoaparát a GPS vyžadují HTTPS.** GitHub Pages ho má, `file://` ne.

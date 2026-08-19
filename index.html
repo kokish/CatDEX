@@ -14,6 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 <style>
 :root{
   --asfalt:#161B26;
@@ -354,12 +356,37 @@ function zpracujSoubor(file){
       const ctx = c.getContext('2d', {willReadFrequently:true});
       ctx.drawImage(img,0,0,w,h);
       // překreslením přes plátno se zbavíme EXIF (GPS, model telefonu, čas)
-      res({ dataUrl: c.toDataURL('image/jpeg', .72), rozbor: rozborPlatna(ctx,w,h) });
+      res({ dataUrl: c.toDataURL('image/jpeg', .72), rozbor: rozborPlatna(ctx,w,h), platno: c });
       URL.revokeObjectURL(img.src);
     };
     img.onerror = ()=>rej(new Error('Fotku se nepodařilo načíst.'));
     img.src = URL.createObjectURL(file);
   });
+}
+
+/* ================= ROZPOZNÁNÍ KOČKY =================
+   Běží čistě na klientovi (TensorFlow.js + coco-ssd, CDN). Když se model
+   nenačte nebo selže, nebráníme focení — appka jen nepozná, že to kočka
+   nejspíš není, a mlčky ji propustí. */
+let modelSlib = null;
+function nactiModel(){
+  if(!modelSlib){
+    modelSlib = (typeof cocoSsd !== 'undefined')
+      ? cocoSsd.load({base:'lite_mobilenet_v2'})
+      : Promise.reject(new Error('model není k dispozici'));
+  }
+  return modelSlib;
+}
+nactiModel().catch(()=>{}); // začni stahovat na pozadí hned při startu appky
+
+async function rozpoznejKocku(platno){
+  try{
+    const model = await nactiModel();
+    const nalezy = await model.detect(platno, 5, 0.4);
+    return nalezy.some(n=>n.class==='cat');
+  }catch(_){
+    return true;
+  }
 }
 
 function zjistiPolohu(){
@@ -509,7 +536,7 @@ function vykresliSbirku(){
   });
 }
 
-function ukazKartu(k, cerstva, znama, duvodBezPolohy){
+function ukazKartu(k, cerstva, znama, duvodBezPolohy, nejspisNeniKocka){
   const v = VZACNOSTI.find(x=>x.nazev===k.vzacnost) || VZACNOSTI[0];
   const poradi = cerstva ? pamet.ulovky.length+1 : pamet.ulovky.findIndex(u=>u.id===k.id)+1;
   const staty = Object.entries(k.statistiky).map(([n,h])=>`
@@ -544,6 +571,7 @@ function ukazKartu(k, cerstva, znama, duvodBezPolohy){
         </div>
         ${k.poloha ? `<div class="meta mono" style="opacity:.6">DEBUG poloha: ${k.poloha.lat.toFixed(5)}, ${k.poloha.lon.toFixed(5)} (±${Math.round(k.poloha.presnost)} m) <a href="https://www.google.com/maps?q=${k.poloha.lat},${k.poloha.lon}" target="_blank" rel="noopener" style="color:var(--mata)">mapa ↗</a></div>` : ''}
         ${!k.poloha && cerstva && duvodBezPolohy ? `<div class="meta mono" style="opacity:.6">Poloha se nepodařila zjistit (${duvodBezPolohy}) — úlovek je uložen bez ní.</div>` : ''}
+        ${cerstva && nejspisNeniKocka ? `<div class="meta mono" style="opacity:.6">Tohle nejspíš není kočka, ale budiž — karta vznikla stejně.</div>` : ''}
         ${staty}
         ${otazka}
         ${!znama ? `<div class="tlacitka">
@@ -569,7 +597,7 @@ function ukazKartu(k, cerstva, znama, duvodBezPolohy){
     pamet.ulovky.push(k); uloz(); vykresliSbirku(); zavri();
     hlas(`${k.jmeno} přidán do sbírky.`);
   });
-  $('#btnJina') && ($('#btnJina').onclick = ()=>ukazKartu(k, true, null, duvodBezPolohy));
+  $('#btnJina') && ($('#btnJina').onclick = ()=>ukazKartu(k, true, null, duvodBezPolohy, nejspisNeniKocka));
   $('#btnStejna') && ($('#btnStejna').onclick = ()=>{
     znama.setkani.push(new Date().toISOString());
     znama.foto = k.foto;
@@ -585,13 +613,15 @@ $('#vstup').onchange = async e=>{
   if(!f) return;
   hlas('Prohlížím fotku…');
   try{
-    const [{dataUrl, rozbor}, {poloha, chyba}] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
+    const [{dataUrl, rozbor, platno}, {poloha, chyba}] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
     const k = vyrobKartu(rozbor, new Date().getHours());
     k.foto = dataUrl;
     k.poloha = poloha;
     if(poloha) console.log('poloha (jen pro testing, v UI se nezobrazuje):', poloha);
+    hlas('Kontroluju, jestli je to kočka…');
+    const jeKocka = await rozpoznejKocku(platno);
     hlas('');
-    ukazKartu(k, true, hledejZnamou(k), chyba);
+    ukazKartu(k, true, hledejZnamou(k), chyba, !jeKocka);
   }catch(err){
     hlas(err.message || 'Něco se nepovedlo, zkus to znovu.');
   }
