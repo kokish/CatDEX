@@ -8,6 +8,10 @@ Vedlejší projekt dvou lidí se zaměstnáním na plný úvazek. Reálná kapac
 **6–10 hodin týdně na osobu**. Každé rozhodnutí se poměřuje tímhle: co nezvládneme
 udržovat, to nestavíme.
 
+Neděláme konkurenci existujícím appkám na trhu (např. Battly). Jde o osobní
+zážitek ze sousedství, ne sociální síť ani startup — proto je v pořádku, když
+appka zůstane čistě lokální i tam, kde by "normální" appka měla sdílení nebo účty.
+
 ---
 
 ## Zásady, které se neobcházejí
@@ -111,9 +115,19 @@ Až se bude sdílet, řeší se to všechno znovu a od začátku.
 **Fáze 1 (běží):** foto → karta → sbírka, lokálně. Záloha do JSON.
 **Fáze 2:** vlastní mapa sbírky (jen moje kočky, jen pro mě). Série
 ("14 dní v řadě"), odznaky, roční přehled. PWA manifest + ikona.
-**Fáze 3:** sdílení jedné karty jako obrázek — bez fotky, bez polohy.
-**Fáze 4:** teprve tady se řeší server, účty a monetizace
-(jednorázově ~199 Kč: bez reklam, neomezená sbírka, roční přehled).
+**Fáze 3:** nejisté, možná se vůbec nestaví. Původní nápad: sdílení jedné
+karty jako obrázek — bez fotky, bez polohy. Ale appka může zůstat čistě
+lokální i tady — vyhne se to starostem (moderace, srovnávání s appkami
+jako Battly) a odpovídá to tomu, že jde o osobní věc, ne sociální síť.
+Rozhodne se blíž k realizaci, neřešit teď.
+**Fáze 4:** teprve tady se řeší server, účty a monetizace. Nový směr
+(zatím jen myšlenka pro budoucnost, nestavět teď): appka jde nativně na
+Android/iOS (App Store/Play Store), protože jen tam jde paywall vynutit —
+na statické webovce v `localStorage` se trial i platba dají trikem
+obejít donekonečna. Model: 7denní trial, pak hard paywall, cca 5 USD/EUR
+přes App Store/Play Store IAP (ten řeší ověření platby za nás). Nahrazuje
+dřívější představu jednorázové platby 199 Kč na webu — přesná cena a
+mechanismus (jednorázově vs. předplatné) se doladí blíž k realizaci.
 
 Nepředbíhej fáze. Když narazíš na něco, co by fáze 2 potřebovala mít
 připravené v datech už teď, řekni to — to je jediná legitimní výjimka.
