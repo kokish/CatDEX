@@ -381,9 +381,14 @@ nactiModel().catch(()=>{}); // začni stahovat na pozadí hned při startu appky
 
 async function rozpoznejKocku(platno){
   try{
-    const model = await nactiModel();
-    const nalezy = await model.detect(platno, 5, 0.4);
-    return nalezy.some(n=>n.class==='cat');
+    return await Promise.race([
+      (async()=>{
+        const model = await nactiModel();
+        const nalezy = await model.detect(platno, 5, 0.4);
+        return nalezy.some(n=>n.class==='cat');
+      })(),
+      new Promise(res=>setTimeout(()=>res(true), 6000)) // model se nestihl stáhnout/spustit — nečekej věčně
+    ]);
   }catch(_){
     return true;
   }
