@@ -623,10 +623,11 @@ function sTimeoutem(slib, ms, zprava){
     new Promise((_,rej)=>setTimeout(()=>rej(new Error(zprava)), ms))
   ]);
 }
-$('#btnLovit').onclick = ()=>$('#vstup').click();
-$('#vstup').onchange = async e=>{
-  const f = e.target.files[0];
-  if(!f){ hlas('Fotoaparát nevrátil fotku. Zkus vyfotit znovu.'); return; }
+let zpracovaniBezi = false;
+async function zpracujVyfoceni(f){
+  if(!f || zpracovaniBezi) return;
+  zpracovaniBezi = true;
+  $('#vstup').value = ''; // hned pryč, ať to fallback níž nezpracuje podruhé
   hlas('Prohlížím fotku…');
   try{
     const [{dataUrl, rozbor, platno}, {poloha, chyba}] = await sTimeoutem(
@@ -645,8 +646,20 @@ $('#vstup').onchange = async e=>{
   }catch(err){
     hlas(err.message || 'Něco se nepovedlo, zkus to znovu.');
   }
-  e.target.value = '';
+  zpracovaniBezi = false;
+}
+$('#btnLovit').onclick = ()=>$('#vstup').click();
+$('#vstup').onchange = e=>{
+  const f = e.target.files[0];
+  if(!f) hlas('Fotoaparát nevrátil fotku. Zkus vyfotit znovu.');
+  zpracujVyfoceni(f);
 };
+// Android/Chrome někdy po návratu z fotoaparátu nespustí change event,
+// i když soubor ve skutečnosti dorazil — při návratu appky do popředí
+// to zkontrolujeme ručně.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') zpracujVyfoceni($('#vstup').files[0]);
+});
 
 /* ================= ZÁLOHA ================= */
 $('#btnExport').onclick = ()=>{
