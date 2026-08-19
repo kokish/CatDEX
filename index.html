@@ -348,18 +348,23 @@ function zpracujSoubor(file){
   return new Promise((res, rej)=>{
     const img = new Image();
     img.onload = ()=>{
-      const max = 900;
-      const m = Math.min(1, max/Math.max(img.width, img.height));
-      const w = Math.round(img.width*m), h = Math.round(img.height*m);
-      const c = document.createElement('canvas');
-      c.width=w; c.height=h;
-      const ctx = c.getContext('2d', {willReadFrequently:true});
-      ctx.drawImage(img,0,0,w,h);
-      // překreslením přes plátno se zbavíme EXIF (GPS, model telefonu, čas)
-      res({ dataUrl: c.toDataURL('image/jpeg', .72), rozbor: rozborPlatna(ctx,w,h), platno: c });
-      URL.revokeObjectURL(img.src);
+      try{
+        const max = 900;
+        const m = Math.min(1, max/Math.max(img.width, img.height));
+        const w = Math.round(img.width*m), h = Math.round(img.height*m);
+        const c = document.createElement('canvas');
+        c.width=w; c.height=h;
+        const ctx = c.getContext('2d', {willReadFrequently:true});
+        ctx.drawImage(img,0,0,w,h);
+        // překreslením přes plátno se zbavíme EXIF (GPS, model telefonu, čas)
+        res({ dataUrl: c.toDataURL('image/jpeg', .72), rozbor: rozborPlatna(ctx,w,h), platno: c });
+      }catch(_){
+        rej(new Error('Fotku se nepodařilo zpracovat.'));
+      }finally{
+        URL.revokeObjectURL(img.src);
+      }
     };
-    img.onerror = ()=>rej(new Error('Fotku se nepodařilo načíst.'));
+    img.onerror = ()=>{ URL.revokeObjectURL(img.src); rej(new Error('Fotku se nepodařilo načíst.')); };
     img.src = URL.createObjectURL(file);
   });
 }
@@ -612,13 +617,23 @@ function ukazKartu(k, cerstva, znama, duvodBezPolohy, nejspisNeniKocka){
 }
 
 /* ================= LOV ================= */
+function sTimeoutem(slib, ms, zprava){
+  return Promise.race([
+    slib,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(zprava)), ms))
+  ]);
+}
 $('#btnLovit').onclick = ()=>$('#vstup').click();
 $('#vstup').onchange = async e=>{
   const f = e.target.files[0];
   if(!f) return;
   hlas('Prohlížím fotku…');
   try{
-    const [{dataUrl, rozbor, platno}, {poloha, chyba}] = await Promise.all([ zpracujSoubor(f), zjistiPolohu() ]);
+    const [{dataUrl, rozbor, platno}, {poloha, chyba}] = await sTimeoutem(
+      Promise.all([ zpracujSoubor(f), zjistiPolohu() ]),
+      15000,
+      'Zpracování fotky trvalo moc dlouho. Zkus to znovu.'
+    );
     const k = vyrobKartu(rozbor, new Date().getHours());
     k.foto = dataUrl;
     k.poloha = poloha;
